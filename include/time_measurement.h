@@ -28,11 +28,35 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "fdtd.h"
+#ifndef __TIME_MEASURING_H
+#define __TIME_MEASURING_H
 
-extern inline void run_fdtd(struct fdtd *fdtd, float_type end_time,
-                            bool verbose);
-extern inline void dump_fdtd(const struct fdtd *fdtd, const char *fileName,
-                             enum dumpable_data dd);
-extern inline void free_fdtd(struct fdtd *fdtd);
-extern inline float_type get_time_step_fdtd(const struct fdtd *fdtd);
+#include <time.h>
+
+#ifdef CLOCK_MONOTONIC_RAW
+#define MEASURING_CLOCK CLOCK_MONOTONIC_RAW
+#else
+#define MEASURING_CLOCK CLOCK_MONOTONIC
+#endif
+
+typedef struct timespec time_measure;
+
+__attribute__((always_inline)) static inline void
+get_current_time(time_measure *time) {
+  clock_gettime(MEASURING_CLOCK, time);
+}
+
+__attribute__((const)) static inline double
+measuring_difftime(time_measure t0, time_measure t1) {
+  double secdiff = difftime(t1.tv_sec, t0.tv_sec);
+  if (t1.tv_nsec < t0.tv_nsec) {
+    long val = 1000000000l - t0.tv_nsec + t1.tv_nsec;
+    secdiff += (double)val / 1e9 - 1.;
+  } else {
+    long val = t1.tv_nsec - t0.tv_nsec;
+    secdiff += (double)val / 1e9;
+  }
+  return secdiff;
+}
+
+#endif // __TIME_MEASURING_H

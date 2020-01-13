@@ -28,16 +28,16 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include "fdtd.h"
+#include "fdtd_common.h"
+#include "initialize.h"
+#include "time_measurement.h"
 #include <getopt.h>
 #include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <tgmath.h>
-
-#include "fdtd.h"
-#include "fdtd_common.h"
-#include "initialize.h"
 
 static struct option opt_options[] = {
     {"one-dimensional", no_argument, 0, '1'},
@@ -54,9 +54,10 @@ static struct option opt_options[] = {
     {"stop-sim-time", required_argument, 0, 't'},
     {"num-iterations", required_argument, 0, 'i'},
     {"help", no_argument, 0, 'h'},
+    {"quiet", no_argument, 0, 'q'},
     {0, 0, 0, 0}};
 
-static const char options[] = ":123s:x:y:z:o:c:w:a:t:i:h";
+static const char options[] = ":123s:x:y:z:o:c:w:a:t:i:hq";
 
 static const char help_string[] =
     "Options:"
@@ -87,7 +88,9 @@ static const char help_string[] =
     "reached"
     "\n  -i --num-iterations      : Stop the simulation after the specified "
     "amount of solver iterations"
-    "\n  -h --help                : Print this help";
+    "\n  -h --help                : Print this help"
+    "\n  -q --quiet               : Do not print information to the user from "
+    "inside the main kernel";
 
 #define default_domain_size float_cst(0.00001)
 #define default_cpml_width 20
@@ -107,6 +110,7 @@ int main(int argc, char **argv) {
   unsigned setup_id = 0; // Default to the first one for each the dimension
   float_type end_time = default_end_time;
   size_t num_iterations = default_iteration_count;
+  bool verbose = true;
 
   while (true) {
     int sscanf_return;
@@ -131,6 +135,9 @@ int main(int argc, char **argv) {
         if (optarg != NULL)
           optind--;
       }
+      break;
+    case 'q':
+      verbose = false;
       break;
     case 'x':
 #if float_type == double
@@ -310,7 +317,12 @@ int main(int argc, char **argv) {
   } else {
     stop_time = (float_type)num_iterations * get_time_step_fdtd(&fdtd);
   }
-  run_fdtd(&fdtd, stop_time);
+  time_measure startTime, endTime;
+  get_current_time(&startTime);
+  run_fdtd(&fdtd, stop_time, verbose);
+  get_current_time(&endTime);
+  fprintf(stdout, "Kernel time %.4fs\n",
+          measuring_difftime(startTime, endTime));
   if (output_filename) {
     dump_fdtd(&fdtd, output_filename, dump_ez);
   }

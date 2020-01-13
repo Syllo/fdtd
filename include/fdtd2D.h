@@ -33,7 +33,6 @@
 
 #include <stdbool.h>
 #include <stdint.h>
-
 #include "fdtd_common.h"
 
 #define arrayOffset2D(sizex, sizey, x, y) ((sizey * x) + y)
@@ -99,7 +98,7 @@ void init_fdtd_2D_medium(struct fdtd2D *fdtd,
                          init_medium_fun_2D permeability_revR,
                          init_medium_fun_2D permittivity_invR, void *user);
 
-void run_2D_fdtd(struct fdtd2D *fdtd, float_type end);
+void run_2D_fdtd(struct fdtd2D *fdtd, float_type end, bool verbose);
 
 void dump_2D_fdtd(const struct fdtd2D *fdtd, const char *fileName,
                   enum dumpable_data what_to_dump);

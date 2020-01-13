@@ -31,10 +31,9 @@
 #ifndef FDTD1D_H_
 #define FDTD1D_H_
 
+#include "fdtd_common.h"
 #include <stdbool.h>
 #include <stdint.h>
-
-#include "fdtd_common.h"
 
 enum border_position1D { border_oneside = 0, border_otherside, num_borders_1D };
 
@@ -68,7 +67,7 @@ typedef float_type (*init_medium_fun)(float_type, void *);
 void init_fdtd_1D_medium(struct fdtd1D *fdtd, init_medium_fun permeability_revR,
                          init_medium_fun permittivity_invR, void *user);
 
-void run_1D_fdtd(struct fdtd1D *fdtd, float_type end);
+void run_1D_fdtd(struct fdtd1D *fdtd, float_type end, bool verbose);
 
 void dump_1D_fdtd(const struct fdtd1D *fdtd, const char *fileName,
                   enum dumpable_data what_to_dump);

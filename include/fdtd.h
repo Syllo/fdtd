@@ -52,16 +52,16 @@ struct fdtd {
   };
 };
 
-inline void run_fdtd(struct fdtd *fdtd, float_type end_time) {
+inline void run_fdtd(struct fdtd *fdtd, float_type end_time, bool verbose) {
   switch (fdtd->type) {
   case fdtd_one_dim:
-    run_1D_fdtd(&fdtd->oneDim, end_time);
+    run_1D_fdtd(&fdtd->oneDim, end_time, verbose);
     break;
   case fdtd_two_dims:
-    run_2D_fdtd(&fdtd->twoDims, end_time);
+    run_2D_fdtd(&fdtd->twoDims, end_time, verbose);
     break;
   case fdtd_three_dims:
-    run_3D_fdtd(&fdtd->threeDims, end_time);
+    run_3D_fdtd(&fdtd->threeDims, end_time, verbose);
     break;
   }
 }

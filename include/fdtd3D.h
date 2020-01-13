@@ -115,7 +115,7 @@ void init_fdtd_3D_medium(struct fdtd3D *fdtd,
                          init_medium_fun_3D permeability_invR,
                          init_medium_fun_3D permittivity_invR, void *user);
 
-void run_3D_fdtd(struct fdtd3D *fdtd, float_type end);
+void run_3D_fdtd(struct fdtd3D *fdtd, float_type end, bool verbose);
 
 void dump_3D_fdtd(const struct fdtd3D *fdtd, const char *fileName,
                   enum dumpable_data what_to_dump);

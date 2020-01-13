@@ -28,14 +28,15 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include "fdtd1D.h"
+#include "fdtd.h"
+#include "fdtd_common.h"
+#include "time_measurement.h"
 #include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <tgmath.h>
-
-#include "fdtd.h"
-#include "fdtd1D.h"
-#include "fdtd_common.h"
+#include <time.h>
 
 static void update_electric_field(struct fdtd1D *fdtd) {
   float_type dtdx = fdtd->dt / fdtd->dx;
@@ -144,12 +145,26 @@ struct fdtd1D init_fdtd_1D(float_type domain_size, float_type Sc,
   return fdtd;
 }
 
-void run_1D_fdtd(struct fdtd1D *fdtd, float_type end_time) {
-  fprintf(stderr, "It will take %.0f iterations\n",
-          (end_time - fdtd->time) / fdtd->dt);
-  /*exit(1);*/
+void run_1D_fdtd(struct fdtd1D *fdtd, float_type end_time, bool verbose) {
+  const double num_iter_d = ceil((end_time - fdtd->time) / fdtd->dt);
+  double print_interval_d;
+  if (num_iter_d >= 10.) {
+    double divide = 1.;
+    do {
+      print_interval_d = ceil(num_iter_d / divide);
+      divide = divide + 1.;
+    } while (num_iter_d / print_interval_d < 10.);
+  } else {
+    print_interval_d = 1.;
+  }
+  const size_t print_interval = (size_t)print_interval_d;
+  const double percent_increment = 100. / (num_iter_d / print_interval_d);
+  const size_t inter_print = print_interval - 1;
+  size_t iter_count = 0;
+  double percentage = percent_increment;
+  time_measure tstart_chunk, tend_chunk;
+  get_current_time(&tstart_chunk);
   for (; fdtd->time < end_time; fdtd->time += fdtd->dt) {
-
     update_magnetic_field(fdtd);
     apply_M_sources(fdtd);
     border_condition_magnetic(fdtd);
@@ -158,7 +173,15 @@ void run_1D_fdtd(struct fdtd1D *fdtd, float_type end_time) {
     apply_J_sources(fdtd);
     border_condition_electric(fdtd);
 
-    /*fprintf(stderr, "Time %e/%e\n", fdtd->time, end_time);*/
+    iter_count = iter_count == inter_print ? 0 : iter_count + 1;
+    if (verbose && iter_count == 0) {
+      get_current_time(&tend_chunk);
+      double difference = measuring_difftime(tstart_chunk, tend_chunk);
+      printf("%.0f%% -- t=%e dt=%e tend=%e (%zu iter in %.3fs)\n", percentage,
+             fdtd->time, fdtd->dt, end_time, print_interval, difference);
+      percentage += percent_increment;
+      tstart_chunk = tend_chunk;
+    }
   }
 }
 

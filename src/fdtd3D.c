@@ -28,15 +28,15 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include "fdtd3D.h"
+#include "fdtd.h"
+#include "fdtd_common.h"
+#include "time_measurement.h"
 #include <inttypes.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <tgmath.h>
-
-#include "fdtd.h"
-#include "fdtd3D.h"
-#include "fdtd_common.h"
 
 static void update_electric_field(struct fdtd3D *fdtd) {
   VLA_3D_definition(float_type, fdtd->sizeX, fdtd->sizeY, fdtd->sizeZ, hx,
@@ -890,12 +890,26 @@ struct fdtd3D init_fdtd_3D_cpml(float_type domain_size[3], float_type Sc,
   return fdtd;
 }
 
-void run_3D_fdtd(struct fdtd3D *fdtd, float_type end_time) {
-  fprintf(stderr, "It will take %.0f iterations\n",
-          (end_time - fdtd->time) / fdtd->dt);
-  /*exit(1);*/
+void run_3D_fdtd(struct fdtd3D *fdtd, float_type end_time, bool verbose) {
+  const double num_iter_d = ceil((end_time - fdtd->time) / fdtd->dt);
+  double print_interval_d;
+  if (num_iter_d >= 10.) {
+    double divide = 1.;
+    do {
+      print_interval_d = ceil(num_iter_d / divide);
+      divide = divide + 1.;
+    } while (num_iter_d / print_interval_d < 10.);
+  } else {
+    print_interval_d = 1.;
+  }
+  const size_t print_interval = (size_t)print_interval_d;
+  const double percent_increment = 100. / (num_iter_d / print_interval_d);
+  const size_t inter_print = print_interval - 1;
+  size_t iter_count = 0;
+  double percentage = percent_increment;
+  time_measure tstart_chunk, tend_chunk;
+  get_current_time(&tstart_chunk);
   for (; fdtd->time < end_time; fdtd->time += fdtd->dt) {
-
     update_magnetic_field(fdtd);
     apply_M_sources(fdtd);
     update_magnetic_cpml(fdtd);
@@ -906,7 +920,15 @@ void run_3D_fdtd(struct fdtd3D *fdtd, float_type end_time) {
     update_electric_cpml(fdtd);
     border_condition_electric(fdtd);
 
-    /*fprintf(stderr, "Time %e/%e\n", fdtd->time, end_time);*/
+    iter_count = iter_count == inter_print ? 0 : iter_count + 1;
+    if (verbose && iter_count == 0) {
+      get_current_time(&tend_chunk);
+      double difference = measuring_difftime(tstart_chunk, tend_chunk);
+      printf("%.0f%% -- t=%e dt=%e tend=%e (%zu iter in %.3fs)\n", percentage,
+             fdtd->time, fdtd->dt, end_time, print_interval, difference);
+      percentage += percent_increment;
+      tstart_chunk = tend_chunk;
+    }
   }
 }
 
