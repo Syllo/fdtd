@@ -55,9 +55,11 @@ static struct option opt_options[] = {
     {"num-iterations", required_argument, 0, 'i'},
     {"help", no_argument, 0, 'h'},
     {"quiet", no_argument, 0, 'q'},
+    {"rand-skip", required_argument, 0, 'R'},
+    {"sort-skip", no_argument, 0, 'S'},
     {0, 0, 0, 0}};
 
-static const char options[] = ":123s:x:y:z:o:c:w:a:t:i:hq";
+static const char options[] = ":123s:x:y:z:o:c:w:a:t:i:hqR:S";
 
 static const char help_string[] =
     "Options:"
@@ -98,6 +100,9 @@ static const char help_string[] =
 #define default_Sc float_cst(-1.)
 #define default_end_time float_cst(-1.)
 #define default_iteration_count 400
+
+double rand_skip_percent = 0.;
+bool sort_skip = false;
 
 int main(int argc, char **argv) {
   float_type domain_size[3] = {default_domain_size, default_domain_size,
@@ -264,6 +269,20 @@ int main(int argc, char **argv) {
     case 'h':
       printf("Usage: %s <options>\n%s\n", argv[0], help_string);
       return EXIT_SUCCESS;
+    case 'R': {
+      sscanf_return = sscanf(optarg, "%lf", &rand_skip_percent);
+      if (sscanf_return == EOF || sscanf_return == 0 ||
+          rand_skip_percent < 0. || rand_skip_percent > 1.) {
+        fprintf(stderr,
+                "Please enter a floating point number between 0 and 1 for the "
+                "random skip value "
+                "instead of \"-%c %s\"\n",
+                optchar, optarg);
+      }
+    } break;
+    case 'S':
+      sort_skip = true;
+      break;
     }
   }
 

@@ -33,10 +33,34 @@
 #include "fdtd_common.h"
 #include "time_measurement.h"
 #include <inttypes.h>
+#include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <tgmath.h>
+
+extern double rand_skip_percent;
+extern bool sort_skip;
+
+struct dataPosDeviation {
+  double previous_val;
+  double error;
+  size_t posX, posY;
+};
+
+static int compareDeviation(const void *a, const void *b) {
+  const struct dataPosDeviation *data1 = (const struct dataPosDeviation *)a;
+  const struct dataPosDeviation *data2 = (const struct dataPosDeviation *)b;
+  if (data1->error < data2->error) {
+    return -1;
+  } else {
+    if (data1->error > data2->error) {
+      return 1;
+    } else {
+      return 0;
+    }
+  }
+}
 
 static void update_electric_field(struct fdtd2D *fdtd) {
   VLA_2D_definition(float_type, fdtd->sizeX, fdtd->sizeY, hx, fdtd->hx);
@@ -48,13 +72,44 @@ static void update_electric_field(struct fdtd2D *fdtd) {
   float_type _dx = float_cst(1.) / fdtd->dx;
   float_type _dy = float_cst(1.) / fdtd->dy;
 
+  struct dataPosDeviation(*dpd)[fdtd->sizeY - 1] =
+      malloc(sizeof(struct dataPosDeviation[fdtd->sizeX - 1][fdtd->sizeY - 1]));
+
   for (uintmax_t i = 1; i < fdtd->sizeX; ++i) {
     for (uintmax_t j = 1; j < fdtd->sizeY; ++j) {
+      if (!sort_skip && drand48() < rand_skip_percent)
+        continue;
+      if (sort_skip) {
+        dpd[i - 1][j - 1].previous_val = ez[i][j];
+      }
       ez[i][j] = ez[i][j] + ((hy[i][j] - hy[i - 1][j]) * _dx -
                              (hx[i][j] - hx[i][j - 1]) * _dy) *
                                 fdtd->dt * permittivity_inv[i][j];
+      if (sort_skip) {
+        dpd[i - 1][j - 1].error = dpd[i - 1][j - 1].previous_val - ez[i][j];
+        dpd[i - 1][j - 1].error *= dpd[i - 1][j - 1].error;
+        dpd[i - 1][j - 1].posX = i;
+        dpd[i - 1][j - 1].posY = j;
+      }
     }
   }
+  if (sort_skip) {
+    qsort(dpd, (fdtd->sizeX - 1) * (fdtd->sizeY - 1),
+          sizeof(struct dataPosDeviation), compareDeviation);
+    double threshold_d =
+        ceil(((fdtd->sizeX - 1) * (fdtd->sizeY - 1)) * rand_skip_percent);
+    size_t threshold = (size_t)threshold_d;
+    size_t whereAmI = 0;
+    for (size_t i = 0; whereAmI < threshold && i < fdtd->sizeX - 1; ++i) {
+      for (size_t j = 0; whereAmI < threshold && j < fdtd->sizeY - 1;
+           ++j, whereAmI++) {
+        // simulate skipping the computation for the values that have lowest
+        // update derivative
+        ez[dpd[i][j].posX][dpd[i][j].posY] = dpd[i][j].previous_val;
+      }
+    }
+  }
+  free(dpd);
 }
 
 static void update_electric_cpml(struct fdtd2D *fdtd) {
@@ -164,19 +219,76 @@ static void update_magnetic_field(struct fdtd2D *fdtd) {
 
   float_type _dy = float_cst(1.) / fdtd->dy;
   float_type _dx = float_cst(1.) / fdtd->dx;
+  struct dataPosDeviation(*dpd)[fdtd->sizeY - 1] =
+      malloc(sizeof(struct dataPosDeviation[fdtd->sizeX - 1][fdtd->sizeY - 1]));
 
   for (uintmax_t i = 0; i < fdtd->sizeX - 1; ++i) {
     for (uintmax_t j = 0; j < fdtd->sizeY - 1; ++j) {
+      if (!sort_skip && drand48() < rand_skip_percent)
+        continue;
+      if (sort_skip) {
+        dpd[i][j].previous_val = hx[i][j];
+      }
       hx[i][j] = hx[i][j] + (ez[i][j] - ez[i][j + 1]) * _dy * fdtd->dt *
                                 permeability_inv[i][j];
+      if (sort_skip) {
+        dpd[i][j].error = dpd[i][j].previous_val - hx[i][j];
+        dpd[i][j].error *= dpd[i][j].error;
+        dpd[i][j].posX = i;
+        dpd[i][j].posY = j;
+      }
+    }
+  }
+  if (sort_skip) {
+    qsort(dpd, (fdtd->sizeX - 1) * (fdtd->sizeY - 1),
+          sizeof(struct dataPosDeviation), compareDeviation);
+    double threshold_d =
+        ceil(((fdtd->sizeX - 1) * (fdtd->sizeY - 1)) * rand_skip_percent);
+    size_t threshold = (size_t)threshold_d;
+    size_t whereAmI = 0;
+    for (size_t i = 0; whereAmI < threshold && i < fdtd->sizeX - 1; ++i) {
+      for (size_t j = 0; whereAmI < threshold && j < fdtd->sizeY - 1;
+           ++j, whereAmI++) {
+        // simulate skipping the computation for the values that have lowest
+        // update derivative
+        hx[dpd[i][j].posX][dpd[i][j].posY] = dpd[i][j].previous_val;
+      }
     }
   }
   for (uintmax_t i = 0; i < fdtd->sizeX - 1; ++i) {
     for (uintmax_t j = 0; j < fdtd->sizeY - 1; ++j) {
+      if (!sort_skip && drand48() < rand_skip_percent)
+        continue;
+      if (sort_skip) {
+        dpd[i][j].previous_val = hy[i][j];
+      }
       hy[i][j] = hy[i][j] + (ez[i + 1][j] - ez[i][j]) * _dx * fdtd->dt *
                                 permeability_inv[i][j];
+      if (sort_skip) {
+        dpd[i][j].error = dpd[i][j].previous_val - hy[i][j];
+        dpd[i][j].error *= dpd[i][j].error;
+        dpd[i][j].posX = i;
+        dpd[i][j].posY = j;
+      }
     }
   }
+  if (sort_skip) {
+    qsort(dpd, (fdtd->sizeX - 1) * (fdtd->sizeY - 1),
+          sizeof(struct dataPosDeviation), compareDeviation);
+    double threshold_d =
+        ceil(((fdtd->sizeX - 1) * (fdtd->sizeY - 1)) * rand_skip_percent);
+    size_t threshold = (size_t)threshold_d;
+    size_t whereAmI = 0;
+    for (size_t i = 0; whereAmI < threshold && i < fdtd->sizeX - 1; ++i) {
+      for (size_t j = 0; whereAmI < threshold && j < fdtd->sizeY - 1;
+           ++j, whereAmI++) {
+        // simulate skipping the computation for the values that have lowest
+        // update derivative
+        hy[dpd[i][j].posX][dpd[i][j].posY] = dpd[i][j].previous_val;
+      }
+    }
+  }
+  free(dpd);
 }
 
 static void update_magnetic_cpml(struct fdtd2D *fdtd) {
