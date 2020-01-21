@@ -41,6 +41,7 @@
 
 extern double rand_skip_percent;
 extern bool sort_skip;
+extern bool interpolate;
 
 struct dataPosDeviation {
   double previous_val;
@@ -77,7 +78,11 @@ static void update_electric_field(struct fdtd2D *fdtd) {
 
   for (uintmax_t i = 1; i < fdtd->sizeX; ++i) {
     for (uintmax_t j = 1; j < fdtd->sizeY; ++j) {
-      if (!sort_skip && drand48() < rand_skip_percent)
+      if (i > fdtd->cpml_thickness + 1 &&
+          i < fdtd->sizeX - fdtd->cpml_thickness - 1 &&
+          j > fdtd->cpml_thickness + 1 &&
+          j < fdtd->sizeY - fdtd->cpml_thickness - 1 && !sort_skip &&
+          !interpolate && drand48() < rand_skip_percent)
         continue;
       if (sort_skip) {
         dpd[i - 1][j - 1].previous_val = ez[i][j];
@@ -90,6 +95,18 @@ static void update_electric_field(struct fdtd2D *fdtd) {
         dpd[i - 1][j - 1].error *= dpd[i - 1][j - 1].error;
         dpd[i - 1][j - 1].posX = i;
         dpd[i - 1][j - 1].posY = j;
+      }
+    }
+  }
+  if (interpolate) {
+    for (uintmax_t i = fdtd->cpml_thickness + 1;
+         i < fdtd->sizeX - fdtd->cpml_thickness - 1; ++i) {
+      for (uintmax_t j = fdtd->cpml_thickness + 1;
+           j < fdtd->sizeY - fdtd->cpml_thickness - 1; ++j) {
+        if (drand48() < rand_skip_percent) {
+          ez[i][j] =
+              (ez[i - 1][j] + ez[i + 1][j] + ez[i][j - 1] + ez[i][j + 1]) / 4.;
+        }
       }
     }
   }
@@ -224,7 +241,11 @@ static void update_magnetic_field(struct fdtd2D *fdtd) {
 
   for (uintmax_t i = 0; i < fdtd->sizeX - 1; ++i) {
     for (uintmax_t j = 0; j < fdtd->sizeY - 1; ++j) {
-      if (!sort_skip && drand48() < rand_skip_percent)
+      if (i > fdtd->cpml_thickness + 1 &&
+          i < fdtd->sizeX - fdtd->cpml_thickness - 1 &&
+          j > fdtd->cpml_thickness + 1 &&
+          j < fdtd->sizeY - fdtd->cpml_thickness - 1 && !sort_skip &&
+          !interpolate && drand48() < rand_skip_percent)
         continue;
       if (sort_skip) {
         dpd[i][j].previous_val = hx[i][j];
@@ -236,6 +257,18 @@ static void update_magnetic_field(struct fdtd2D *fdtd) {
         dpd[i][j].error *= dpd[i][j].error;
         dpd[i][j].posX = i;
         dpd[i][j].posY = j;
+      }
+    }
+  }
+  if (interpolate) {
+    for (uintmax_t i = fdtd->cpml_thickness + 1;
+         i < fdtd->sizeX - fdtd->cpml_thickness - 1; ++i) {
+      for (uintmax_t j = fdtd->cpml_thickness + 1;
+           j < fdtd->sizeY - fdtd->cpml_thickness - 1; ++j) {
+        if (drand48() < rand_skip_percent) {
+          hx[i][j] =
+              (hx[i - 1][j] + hx[i + 1][j] + hx[i][j - 1] + hx[i][j + 1]) / 4.;
+        }
       }
     }
   }
@@ -257,7 +290,11 @@ static void update_magnetic_field(struct fdtd2D *fdtd) {
   }
   for (uintmax_t i = 0; i < fdtd->sizeX - 1; ++i) {
     for (uintmax_t j = 0; j < fdtd->sizeY - 1; ++j) {
-      if (!sort_skip && drand48() < rand_skip_percent)
+      if (i > fdtd->cpml_thickness + 1 &&
+          i < fdtd->sizeX - fdtd->cpml_thickness - 1 &&
+          j > fdtd->cpml_thickness + 1 &&
+          j < fdtd->sizeY - fdtd->cpml_thickness - 1 && !sort_skip &&
+          !interpolate && drand48() < rand_skip_percent)
         continue;
       if (sort_skip) {
         dpd[i][j].previous_val = hy[i][j];
@@ -269,6 +306,18 @@ static void update_magnetic_field(struct fdtd2D *fdtd) {
         dpd[i][j].error *= dpd[i][j].error;
         dpd[i][j].posX = i;
         dpd[i][j].posY = j;
+      }
+    }
+  }
+  if (interpolate) {
+    for (uintmax_t i = fdtd->cpml_thickness + 1;
+         i < fdtd->sizeX - fdtd->cpml_thickness - 1; ++i) {
+      for (uintmax_t j = fdtd->cpml_thickness + 1;
+           j < fdtd->sizeY - fdtd->cpml_thickness - 1; ++j) {
+        if (drand48() < rand_skip_percent) {
+          hy[i][j] =
+              (hy[i - 1][j] + hy[i + 1][j] + hy[i][j - 1] + hy[i][j + 1]) / 4.;
+        }
       }
     }
   }

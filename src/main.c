@@ -57,9 +57,10 @@ static struct option opt_options[] = {
     {"quiet", no_argument, 0, 'q'},
     {"rand-skip", required_argument, 0, 'R'},
     {"sort-skip", no_argument, 0, 'S'},
+    {"interpolate", no_argument, 0, 'I'},
     {0, 0, 0, 0}};
 
-static const char options[] = ":123s:x:y:z:o:c:w:a:t:i:hqR:S";
+static const char options[] = ":123s:x:y:z:o:c:w:a:t:i:hqR:SI";
 
 static const char help_string[] =
     "Options:"
@@ -103,6 +104,7 @@ static const char help_string[] =
 
 double rand_skip_percent = 0.;
 bool sort_skip = false;
+bool interpolate = false;
 
 int main(int argc, char **argv) {
   float_type domain_size[3] = {default_domain_size, default_domain_size,
@@ -282,6 +284,9 @@ int main(int argc, char **argv) {
     } break;
     case 'S':
       sort_skip = true;
+      break;
+    case 'I':
+      interpolate = true;
       break;
     }
   }
